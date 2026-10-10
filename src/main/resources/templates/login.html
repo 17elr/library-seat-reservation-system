@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>登录 · 图书馆座位预约</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}" />
+  </head>
+  <body class="login-body">
+    <main class="login-shell">
+      <section class="login-intro">
+        <img
+          class="login-photo"
+          th:src="@{/images/library-windows.webp}"
+          alt="落地窗旁的图书馆阅读空间"
+          width="955"
+          height="1440"
+        />
+        <div class="login-photo-shade" aria-hidden="true"></div>
+        <div class="wordmark">
+          <span class="brand-mark">图</span>
+          <div>图书馆<span class="brand-sub">座位预约管理系统</span></div>
+        </div>
+        <h1>座位预约服务</h1>
+        <p class="intro-copy">
+          查询阅览室开放安排，预约自习座位，<br />管理签到与使用记录。
+        </p>
+        <div class="service-guide">
+          <h2>使用说明</h2>
+          <ol>
+            <li>登录后选择日期、时段与阅览室。</li>
+            <li>选座并确认预约，到馆后完成签到。</li>
+            <li>短时离开登记暂离，离馆前完成签退。</li>
+          </ol>
+        </div>
+        <p class="login-foot">
+          请按时签到，不使用时及时释放座位。<span>环境配图为示意图片</span>
+        </p>
+      </section>
+      <section class="login-form-panel">
+        <h2>账号登录</h2>
+        <p class="muted">学生与管理员使用同一入口登录。</p>
+        <div th:if="${param.error}" class="alert error" role="alert">
+          账号或密码错误，或账号已被停用。
+        </div>
+        <div th:if="${param.logout}" class="alert success" role="status">
+          您已安全退出。
+        </div>
+        <div th:if="${param.expired}" class="alert info" role="status">
+          登录凭据已更新或账号已停用，请重新登录。
+        </div>
+        <form th:action="@{/login}" method="post" class="login-form">
+          <label
+            >账号<input
+              name="username"
+              autocomplete="username"
+              placeholder="请输入学号或管理员账号"
+              maxlength="32"
+              required
+              autofocus
+          /></label>
+          <label
+            >密码<input
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              placeholder="请输入密码"
+              required
+              maxlength="64"
+          /></label>
+          <button class="primary" type="submit">登 录</button>
+        </form>
+        <p class="muted small">
+          账号由图书馆管理员提供，忘记密码请联系管理员。
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

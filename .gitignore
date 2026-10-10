@@ -1,0 +1,20 @@
+target/
+.local/
+.idea/
+*.iml
+*.log
+node_modules/
+test-results/
+playwright-report/
+
+# Personal coursework, reference material and duplicate submission copies.
+/交付/
+/资料/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.vscode/
+.DS_Store
+Thumbs.db
