@@ -4,7 +4,7 @@
 
 Java21、Node22.12+、MySQL8、Redis7.4（Compose配置），Python3与mysql/mysqldump客户端用于数据工具。生产连接使用专用library用户；测试只能连接library_seat_test，测试清表前会断言库名。
 
-`.env.example`复制为`.env`并修改密码，`docker compose up -d`启动仅绑定127.0.0.1的13318/16378。不要修改机器原MySQL服务；若端口已被其他项目占用，应先核对所有者。`docker compose stop`保留卷，不使用down -v。
+`.env.example`复制为`.env`并修改密码，`docker compose up -d --wait`启动仅绑定127.0.0.1的13318/16378。不要修改机器原MySQL服务；若端口已被其他项目占用，应先核对所有者。`docker compose stop`保留卷，不使用down -v。
 
 ## Windows
 

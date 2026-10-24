@@ -19,9 +19,9 @@ assignees: ''
 ## 运行环境
 
 - 操作系统：
-- Java / Maven / MySQL 版本：
+- Java / Maven / Node / MySQL / Redis 版本：
 - 浏览器与版本：
-- Git 提交或版本：
+- Git 分支与提交：
 
 ## 截图或日志
 
