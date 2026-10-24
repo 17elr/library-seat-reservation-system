@@ -25,10 +25,10 @@
   >INSERT INTO sys_user(student_no,password_hash,name,class_name,role,enabled) VALUES(#{studentNo},#{passwordHash},#{name},#{className},#{role},#{enabled})</insert>
   <update
     id="password"
-  >UPDATE sys_user SET password_hash=#{hash} WHERE id=#{id}</update>
+  >UPDATE sys_user SET password_hash=#{hash},auth_version=auth_version+1 WHERE id=#{id}</update>
   <update
     id="enableUser"
-  >UPDATE sys_user SET enabled=#{enabled} WHERE id=#{id}</update>
+  >UPDATE sys_user SET enabled=#{enabled},auth_version=auth_version+1 WHERE id=#{id}</update>
   <update
     id="blockUser"
   >UPDATE sys_user SET blocked_until=#{until} WHERE id=#{id}</update>
@@ -111,13 +111,16 @@
   ><include
       refid="reservationColumns"
     /> WHERE a.status IN ('RESERVED','CHECKED_IN','TEMP_LEFT') ORDER BY a.id</select>
+  <sql id="effectiveStatus">CASE WHEN a.status='RESERVED' AND a.checkin_deadline &lt; #{now} THEN 'NO_SHOW'
+ WHEN a.status='TEMP_LEFT' AND a.leave_deadline &lt; a.end_time AND a.leave_deadline &lt; #{now} THEN 'LEAVE_TIMEOUT'
+ WHEN a.status IN ('RESERVED','CHECKED_IN','TEMP_LEFT') AND a.end_time &lt;= #{now} THEN 'COMPLETED' ELSE a.status END</sql>
   <sql id="filters"><where>
     <if test="userId != null">AND a.user_id=#{userId}</if>
     <if test="status != null and status != ''">
       <choose><when
             test="status == 'ACTIVE'"
-          >AND a.status IN ('RESERVED','CHECKED_IN','TEMP_LEFT')</when><otherwise
-          >AND a.status=#{status}</otherwise></choose>
+          >AND (<include refid="effectiveStatus"/>) IN ('RESERVED','CHECKED_IN','TEMP_LEFT')</when><otherwise
+          >AND (<include refid="effectiveStatus"/>)=#{status}</otherwise></choose>
     </if>
     <if
         test="search != null and search != ''"
@@ -142,7 +145,7 @@
     id="insertReservation"
     useGeneratedKeys="true"
     keyProperty="id"
-  >INSERT INTO reservation(reservation_no,user_id,seat_id,start_time,end_time,status,rule_id,request_key,created_at) VALUES(#{reservationNo},#{userId},#{seatId},#{startTime},#{endTime},#{status},#{ruleId},#{requestKey},#{createdAt})</insert>
+  >INSERT INTO reservation(reservation_no,user_id,seat_id,start_time,end_time,status,rule_id,request_key,created_at,checkin_deadline) VALUES(#{reservationNo},#{userId},#{seatId},#{startTime},#{endTime},#{status},#{ruleId},#{requestKey},#{createdAt},#{checkinDeadline})</insert>
   <update
     id="updateReservation"
   >UPDATE reservation SET status=#{status},checkin_at=#{checkinAt},leave_at=#{leaveAt},leave_deadline=#{leaveDeadline},leave_count=#{leaveCount},finished_at=#{finishedAt},finish_reason=#{finishReason} WHERE id=#{id}</update>
@@ -216,8 +219,29 @@
     COALESCE(SUM(a.status='ADMIN_CLOSED'),0) adminClosed,
     COALESCE(SUM(a.checkin_at IS NOT NULL AND a.status NOT IN ('CANCELLED','ADMIN_CLOSED') AND DATE_ADD(a.start_time,INTERVAL q.checkin_grace_minutes MINUTE) &lt; #{now}),0) arrived,
     COALESCE(SUM(a.status NOT IN ('CANCELLED','ADMIN_CLOSED') AND DATE_ADD(a.start_time,INTERVAL q.checkin_grace_minutes MINUTE) &lt; #{now}),0) due,
-    COALESCE(SUM(a.status='NO_SHOW'),0) noShow,
-    COALESCE(SUM(a.status='LEAVE_TIMEOUT'),0) leaveTimeout
+    COALESCE(SUM((<include refid="effectiveStatus"/>)='NO_SHOW'),0) noShow,
+    COALESCE(SUM((<include refid="effectiveStatus"/>)='LEAVE_TIMEOUT'),0) leaveTimeout
     FROM reservation a JOIN system_rule q ON q.id=a.rule_id WHERE a.start_time &gt;= #{start} AND a.start_time &lt; #{end}
   </select>
+
+ <select id="allRules" resultType="cn.edu.library.model.Models$Rule">SELECT * FROM system_rule ORDER BY effective_at DESC,id DESC</select>
+ <select id="dueCandidates" resultType="long">
+ SELECT id FROM (
+ (SELECT id FROM reservation FORCE INDEX (idx_expiry_checkin) WHERE status='RESERVED' AND checkin_deadline &lt; #{now} AND id &gt; #{after} ORDER BY id LIMIT #{limit})
+ UNION
+ (SELECT id FROM reservation FORCE INDEX (idx_expiry_leave) WHERE status='TEMP_LEFT' AND leave_deadline &lt; #{now} AND leave_deadline &lt; end_time AND id &gt; #{after} ORDER BY id LIMIT #{limit})
+ UNION
+ (SELECT id FROM reservation FORCE INDEX (idx_expiry_end) WHERE status IN ('RESERVED','CHECKED_IN','TEMP_LEFT') AND end_time &lt;= #{now} AND id &gt; #{after} ORDER BY id LIMIT #{limit})
+ ) candidates ORDER BY id LIMIT #{limit}
+ </select>
+ <select id="relatedActive" resultType="cn.edu.library.model.Models$Reservation">
+ <include refid="reservationColumns"/> WHERE a.status IN ('RESERVED','CHECKED_IN','TEMP_LEFT') AND
+ (<choose><when test="userId != null and seatId != null">a.user_id=#{userId} OR a.seat_id=#{seatId}</when><when test="userId != null">a.user_id=#{userId}</when><otherwise>a.seat_id=#{seatId}</otherwise></choose>) ORDER BY a.id
+ </select>
+ <select id="roomActive" resultType="cn.edu.library.model.Models$Reservation"><include refid="reservationColumns"/> WHERE s.room_id=#{roomId} AND a.status IN ('RESERVED','CHECKED_IN','TEMP_LEFT') ORDER BY a.id</select>
+ <sql id="live">a.status IN ('RESERVED','CHECKED_IN','TEMP_LEFT') AND (<include refid="effectiveStatus"/>) IN ('RESERVED','CHECKED_IN','TEMP_LEFT')</sql>
+ <select id="liveUser" resultType="cn.edu.library.model.Models$Reservation"><include refid="reservationColumns"/> WHERE a.user_id=#{userId} AND <include refid="live"/> ORDER BY a.id</select>
+ <select id="liveSeat" resultType="cn.edu.library.model.Models$Reservation"><include refid="reservationColumns"/> WHERE a.seat_id=#{seatId} AND a.start_time &lt; #{end} AND a.end_time &gt; #{start} AND <include refid="live"/> ORDER BY a.id</select>
+ <select id="roomOccupancy" resultType="cn.edu.library.model.Models$Reservation"><include refid="reservationColumns"/> WHERE s.room_id=#{roomId} AND a.start_time &lt; #{end} AND a.end_time &gt; #{start} AND <include refid="live"/> ORDER BY a.id</select>
+ <select id="liveCounts" resultType="map">SELECT COALESCE(SUM(a.status='CHECKED_IN' AND a.start_time &lt;= #{now}),0) inUse, COALESCE(SUM(a.status='TEMP_LEFT'),0) away, COALESCE(SUM(a.status='RESERVED'),0) waiting FROM reservation a WHERE <include refid="live"/></select>
 </mapper>

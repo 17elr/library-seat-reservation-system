@@ -3,6 +3,7 @@ package cn.edu.library.service;
 import org.springframework.http.HttpStatus;
 
 public class BusinessException extends RuntimeException {
+
     public final HttpStatus status;
 
     public BusinessException(String message) {

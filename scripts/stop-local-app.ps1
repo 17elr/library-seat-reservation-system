@@ -1,11 +1,11 @@
-﻿$ErrorActionPreference = 'Stop'
-$listen = Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue
-if ($listen) {
-    $appProcess = Get-CimInstance Win32_Process -Filter "ProcessId=$($listen[0].OwningProcess)"
-    if ($appProcess -and $appProcess.Name -eq 'java.exe' -and $appProcess.CommandLine -and $appProcess.CommandLine.Replace('\','/').Contains('target/library-seat-0.1.0.jar')) {
-        Stop-Process -Id $appProcess.ProcessId
-        Write-Host 'Library seat application stopped.'
-    } else {
-        throw 'The listener on 8080 is not this application. No process was stopped.'
-    }
-}
+$ErrorActionPreference = 'Stop'
+$projectRoot = Split-Path $PSScriptRoot -Parent
+$pidFile = Join-Path $projectRoot '.local/app.pid'
+if (!(Test-Path $pidFile)) { throw '没有本目录启动的 PID 记录。' }
+$appPid = [int](Get-Content $pidFile)
+$process = Get-CimInstance Win32_Process -Filter "ProcessId=$appPid"
+if (!$process) { Write-Host '应用已经停止。'; exit }
+$jar = Join-Path $projectRoot 'target/library-seat-0.1.0.jar'
+if (!$process.CommandLine.Contains($jar)) { throw 'PID 已被其他进程复用，停止操作已取消。' }
+Stop-Process -Id $appPid
+Write-Host '应用已停止；数据库与历史数据保留。'

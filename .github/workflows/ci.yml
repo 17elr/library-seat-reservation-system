@@ -1,53 +1,88 @@
 name: CI
-
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
   verify:
-    name: Java 21 / MySQL 8.0
+    name: Java 21 / MySQL 8 / Redis 7 / Vue
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     services:
       mysql:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: ci-root-only
+          MYSQL_ROOT_HOST: '%'
+          TZ: Asia/Shanghai
           MYSQL_DATABASE: library_seat_test
-          MYSQL_USER: library
-          MYSQL_PASSWORD: ci-library-only
-        ports:
-          - 3306:3306
+        ports: ['13318:3306']
         options: >-
           --health-cmd="mysqladmin ping --host=127.0.0.1 --silent"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=12
+          --health-interval=5s --health-timeout=5s --health-retries=24
+      redis:
+        image: redis:7.4
+        ports: ['16378:6379']
+        options: >-
+          --health-cmd="redis-cli ping" --health-interval=5s
+          --health-timeout=5s --health-retries=12
     env:
-      TEST_DB_URL: jdbc:mysql://127.0.0.1:3306/library_seat_test?serverTimezone=Asia/Shanghai&characterEncoding=utf8&allowPublicKeyRetrieval=true&useSSL=false
-      TEST_DB_USER: library
-      TEST_DB_PASSWORD: ci-library-only
+      TEST_DB_URL: jdbc:mysql://127.0.0.1:13318/library_seat_test?serverTimezone=Asia/Shanghai&characterEncoding=utf8&allowPublicKeyRetrieval=true&useSSL=false
+      TEST_DB_USER: root
+      TEST_DB_PASSWORD: ci-root-only
+      DB_USER: root
+      DB_PASSWORD: ci-root-only
+      MYSQL_PWD: ci-root-only
+      DB_URL: jdbc:mysql://127.0.0.1:13318/library_seat_e2e?serverTimezone=Asia/Shanghai&characterEncoding=utf8&allowPublicKeyRetrieval=true&useSSL=false
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Java 21
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
           cache: maven
-      - name: Test and package
-        run: mvn -B -ntp verify
-      - name: Upload test reports
-        if: always()
-        uses: actions/upload-artifact@v4
+      - uses: actions/setup-node@v4
         with:
-          name: test-reports
-          path: target/surefire-reports/
-          if-no-files-found: ignore
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Vue install, format, test and build
+        run: |
+          npm ci --prefix web
+          npm run format:check --prefix web
+          npm run format:java:check --prefix web
+          npm test --prefix web
+          npm run build --prefix web
+      - name: Real MySQL and Redis integration tests and package
+        run: mvn -B -ntp verify
+      - name: Start separate browser demo database and app
+        run: |
+          mysql -h127.0.0.1 -P13318 -uroot -e 'CREATE DATABASE library_seat_e2e CHARACTER SET utf8mb4'
+          mkdir -p .local
+          java -jar target/library-seat-0.1.0.jar --spring.profiles.active=demo >.local/e2e-app.log 2>&1 &
+          for i in {1..45}; do
+            if curl --fail -s http://127.0.0.1:18082/api/auth/csrf >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat .local/e2e-app.log
+          exit 1
+      - name: Critical browser workflows
+        working-directory: web
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verification-evidence
+          path: |
+            target/surefire-reports/
+            web/playwright-report/
+            web/test-results/
+            .local/expiry-explain.json
+            .local/e2e-app.log
+            docs/images/vue/
