@@ -1,0 +1,43 @@
+{
+  "query_block": {
+    "select_id": 1,
+    "cost_info": {
+      "query_cost": "217.71"
+    },
+    "ordering_operation": {
+      "using_filesort": true,
+      "cost_info": {
+        "sort_cost": "134.99"
+      },
+      "table": {
+        "table_name": "reservation",
+        "access_type": "range",
+        "possible_keys": [
+          "idx_expiry_checkin"
+        ],
+        "key": "idx_expiry_checkin",
+        "used_key_parts": [
+          "status",
+          "checkin_deadline"
+        ],
+        "key_length": "103",
+        "rows_examined_per_scan": 405,
+        "rows_produced_per_join": 134,
+        "filtered": "33.33",
+        "using_index": true,
+        "cost_info": {
+          "read_cost": "69.23",
+          "eval_cost": "13.50",
+          "prefix_cost": "82.72",
+          "data_read_per_join": "184K"
+        },
+        "used_columns": [
+          "id",
+          "status",
+          "checkin_deadline"
+        ],
+        "attached_condition": "((`library_seat_test`.`reservation`.`status` = 'RESERVED') and (`library_seat_test`.`reservation`.`checkin_deadline` < TIMESTAMP'2026-10-09 10:00:00') and (`library_seat_test`.`reservation`.`id` > 0))"
+      }
+    }
+  }
+}

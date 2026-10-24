@@ -1,8 +1,9 @@
 spring:
   datasource:
-    url: ${TEST_DB_URL:jdbc:mysql://127.0.0.1:13307/library_seat_test?serverTimezone=Asia/Shanghai&characterEncoding=utf8&allowPublicKeyRetrieval=true&useSSL=false}
-    username: ${TEST_DB_USER:library}
-    password: ${TEST_DB_PASSWORD:local-library-demo}
+    url: ${TEST_DB_URL:jdbc:mysql://127.0.0.1:13318/library_seat_test?serverTimezone=Asia/Shanghai&characterEncoding=utf8&allowPublicKeyRetrieval=true&useSSL=false}
+    username: ${TEST_DB_USER:root}
+    password: ${TEST_DB_PASSWORD:}
 library:
   seed-demo: true
+  cache-enabled: false
   sweep-delay: 3600000

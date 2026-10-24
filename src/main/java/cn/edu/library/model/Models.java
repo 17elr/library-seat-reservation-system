@@ -1,19 +1,23 @@
 package cn.edu.library.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-
+import java.time.*;
 import lombok.Data;
 
-import java.time.*;
-
 public final class Models {
+
     private Models() {}
 
     @Data
     public static class User {
+
         public Long id;
+        public long authVersion;
         public String studentNo;
-        @JsonIgnore public String passwordHash;
+
+        @JsonIgnore
+        public String passwordHash;
+
         public String name, className, role;
         public boolean enabled;
         public LocalDateTime blockedUntil, createdAt;
@@ -21,6 +25,7 @@ public final class Models {
 
     @Data
     public static class Room {
+
         public Long id;
         public String code, name, floor, description;
         public boolean enabled;
@@ -30,6 +35,7 @@ public final class Models {
 
     @Data
     public static class Seat {
+
         public Long id, roomId;
         public String seatNo;
         public int rowNo, colNo;
@@ -39,6 +45,7 @@ public final class Models {
 
     @Data
     public static class Opening {
+
         public Long id, roomId;
         public LocalDate specialDate;
         public boolean isClosed;
@@ -48,36 +55,27 @@ public final class Models {
 
     @Data
     public static class Rule {
+
         public Long id;
         public LocalDateTime effectiveAt;
-        public int advanceDays,
-                maxDurationMinutes,
-                checkinEarlyMinutes,
-                checkinGraceMinutes,
-                leaveMinutes,
-                leaveLimit,
-                violationWindowDays,
-                violationLimit,
-                blockDays;
+        public int advanceDays, maxDurationMinutes, checkinEarlyMinutes, checkinGraceMinutes, leaveMinutes, leaveLimit, violationWindowDays, violationLimit, blockDays;
     }
 
     @Data
     public static class Reservation {
+
         public Long id, userId, seatId, ruleId;
-        public String reservationNo, status, requestKey;
-        public LocalDateTime startTime,
-                endTime,
-                checkinAt,
-                leaveAt,
-                leaveDeadline,
-                finishedAt,
-                createdAt;
+        public String reservationNo, status, requestKey, persistedStatus;
+        public boolean stateComputed;
+        public LocalDateTime checkinDeadline;
+        public LocalDateTime startTime, endTime, checkinAt, leaveAt, leaveDeadline, finishedAt, createdAt;
         public int leaveCount;
         public String finishReason, seatNo, roomName, studentNo, userName;
     }
 
     @Data
     public static class Violation {
+
         public Long id, reservationId, userId, revokedBy;
         public String type, reason, revokeReason, studentNo, userName;
         public LocalDateTime occurredAt, revokedAt;
@@ -86,6 +84,7 @@ public final class Models {
 
     @Data
     public static class Notice {
+
         public Long id, createdBy;
         public String title, content;
         public boolean published;
@@ -94,6 +93,7 @@ public final class Models {
 
     @Data
     public static class Event {
+
         public Long id, reservationId, actorId;
         public String fromStatus, toStatus, eventType, reason;
         public LocalDateTime occurredAt;
@@ -101,6 +101,7 @@ public final class Models {
 
     @Data
     public static class Audit {
+
         public Long id, operatorId, targetId;
         public String operation, targetType, reason, operatorName;
         public LocalDateTime createdAt;

@@ -1,12 +1,10 @@
 package cn.edu.library.mapper;
 
 import cn.edu.library.model.Models.*;
-
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
-
 import java.time.*;
 import java.util.*;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 @Mapper
 public interface LibraryMapper {
@@ -42,7 +40,10 @@ public interface LibraryMapper {
 
     int updateSeat(Seat seat);
 
-    Opening opening(@Param("roomId") long roomId, @Param("date") LocalDate date);
+    Opening opening(
+        @Param("roomId") long roomId,
+        @Param("date") LocalDate date
+    );
 
     List<Opening> openings();
 
@@ -58,23 +59,58 @@ public interface LibraryMapper {
 
     Reservation reservation(long id);
 
-    Reservation byRequest(@Param("userId") long userId, @Param("key") String key);
+    Reservation byRequest(
+        @Param("userId") long userId,
+        @Param("key") String key
+    );
 
-    List<Reservation> active();
+    List<Reservation> active(); // Test/diagnostic only; production paths use bounded queries.
+    List<Rule> allRules();
+    List<Long> dueCandidates(
+        @Param("now") LocalDateTime now,
+        @Param("after") long after,
+        @Param("limit") int limit
+    );
+    List<Reservation> relatedActive(
+        @Param("userId") Long userId,
+        @Param("seatId") Long seatId
+    );
+    List<Reservation> roomActive(long roomId);
+    List<Reservation> liveUser(
+        @Param("userId") long userId,
+        @Param("now") LocalDateTime now
+    );
+    List<Reservation> liveSeat(
+        @Param("seatId") long seatId,
+        @Param("start") LocalDateTime start,
+        @Param("end") LocalDateTime end,
+        @Param("now") LocalDateTime now
+    );
+    List<Reservation> roomOccupancy(
+        @Param("roomId") long roomId,
+        @Param("start") LocalDateTime start,
+        @Param("end") LocalDateTime end,
+        @Param("now") LocalDateTime now
+    );
+    Map<String, Object> liveCounts(LocalDateTime now);
 
     List<Reservation> reservations(
-            @Param("userId") Long userId,
-            @Param("status") String status,
-            @Param("search") String search,
-            @Param("date") LocalDate date,
-            @Param("offset") int offset,
-            @Param("limit") int limit);
+        @Param("userId") Long userId,
+        @Param("status") String status,
+        @Param("search") String search,
+        @Param("date") LocalDate date,
+        @Param("offset") int offset,
+        @Param("limit") int limit,
+        @Param("now") LocalDateTime now
+    );
 
     int countReservations(
-            @Param("userId") Long userId,
-            @Param("status") String status,
-            @Param("search") String search,
-            @Param("date") LocalDate date);
+        @Param("userId") Long userId,
+        @Param("status") String status,
+        @Param("search") String search,
+        @Param("date") LocalDate date,
+        @Param("now") LocalDateTime now
+    );
 
     int insertReservation(Reservation reservation);
 
@@ -87,10 +123,16 @@ public interface LibraryMapper {
     int startUsage(@Param("id") long id, @Param("start") LocalDateTime start);
 
     int endUsage(
-            @Param("id") long id, @Param("end") LocalDateTime end, @Param("reason") String reason);
+        @Param("id") long id,
+        @Param("end") LocalDateTime end,
+        @Param("reason") String reason
+    );
 
     List<Violation> violations(
-            @Param("userId") Long userId, @Param("offset") int offset, @Param("limit") int limit);
+        @Param("userId") Long userId,
+        @Param("offset") int offset,
+        @Param("limit") int limit
+    );
 
     int countViolations(Long userId);
 
@@ -115,7 +157,8 @@ public interface LibraryMapper {
     int countAudits();
 
     Map<String, Object> statistics(
-            @Param("start") LocalDateTime start,
-            @Param("end") LocalDateTime end,
-            @Param("now") LocalDateTime now);
+        @Param("start") LocalDateTime start,
+        @Param("end") LocalDateTime end,
+        @Param("now") LocalDateTime now
+    );
 }
